@@ -12,16 +12,16 @@ QSDB uses [InfluxDB](https://www.influxdata.com/) for data storage.
 
 * Why InfluxDB?
   - [`influxdb`](https://github.com/influxdata/influxdb) is pure Go, open source, and very popular: ★ 9,582 / ⑂ 1,351
-    + ⭐ Simple internal data model and easy-to-use HTTP API and query language [InfluxQL](https://docs.influxdata.com/influxdb/v1.1/query_language/spec/)
+    + ⭐ Simple internal data model; easy-to-use HTTP API and query language ([InfluxQL](https://docs.influxdata.com/influxdb/v1.1/query_language/spec/))
     + 💯 Everything is timestamped
     + 😍 Space-efficient long-term storage
     + 🤑 Commercially-driven; but, beyond the enterprise support model, it's pretty clear what the value-add of the paid version is: distributed deployment
     + Plays nicely with other time-series protocols, e.g., [Graphite](https://graphiteapp.org/), [collectd](https://collectd.org/), [StatsD](https://github.com/etsy/statsd)
-    + InfluxData has built their entire [TICK stack](https://www.influxdata.com/use-cases/introducing-the-tick-stack/) to work great together.
-      * **T**elegraf, which is great for harvesting and ingesting data from system metrics and log files
-      * (**I**nfluxDB)
-      * **C**hronograf shows promise, but Grafana is currently a better product
-      * **K**apacitor is for post-processing (anomaly detection, alerting) time-series data, but I haven't used it for anything yet
+    + InfluxData has built their entire [`TICK` stack](https://www.influxdata.com/use-cases/introducing-the-tick-stack/) to work well in concert.
+      * `T`elegraf, which is great for harvesting and ingesting data from system metrics and log files
+      * `I`nfluxDB, the core data storage and retrieval mechanism
+      * `C`hronograf shows promise, but Grafana is currently a better product
+      * `K`apacitor is for post-processing (anomaly detection, alerting) time-series data, but I haven't used it for anything yet
 * Why not ...?
   - [Prometheus](https://prometheus.io/)
     + [`prometheus`](https://github.com/prometheus/prometheus) is also pure Go, and quite popular: ★ 7,574 / ⑂ 742
@@ -83,6 +83,52 @@ InfluxDB **fields** can have one of the following values:
   - Can be either TRUE or FALSE
   - TRUE literals in Line Protocol: `t`, `T`, `true`, `True`, `TRUE`
   - FALSE literals in Line Protocol: `f`, `F`, `false`, `False`, `FALSE`
+
+
+# Database:
+
+## `physical`
+
+This is the database name I'll be using throughout. I also considered `health`, `self`, and `human`, among others, but "physical" seems the most descriptive of the lot, since I include a number of environmental factors in this database.
+
+
+## Measurements:
+
+### `heart`
+
+Key      | Type     | Description
+---------|----------|------------
+`device` | string?  | **tag** the name of the electronic device reporting the measurement
+`bpm`    | integer  | beats per minute (aka `rate`)
+`rr`     | integer? | RR-interval in milliseconds (not 1/1024 of a second, as Bluetooth LE natively reports). It's empty on the first reported measurement in a given session
+
+Example:
+
+    heart,device=polarH7 bpm=64i,rr=99i
+
+Note that tag values are never quoted
+
+TODO:
+* Maybe also include a `session_id=<string>` field, e.g., `session_id="2016-12-26a"`
+  I.e., for doing `GROUP BY` aggregates?
+  It has to be a field, since you cannot `GROUP BY` tag values.
+
+
+### `location`
+
+Key         | Type    | Description
+------------|---------|------------
+`device`    | string? | **tag** the name of the electronic device reporting the measurement
+`longitude` | float   | Degrees easting (x-axis) in WGS 84 coordinate system
+`latitude`  | float   | Degrees northing (y-axis) in WGS 84 coordinate system
+`altitude`  | float?  | Altitude in meters, if known
+`accuracy`  | float?  | Accuracy of geolocation in meters, if known (calculated from max of horizontal and vertical components if split)
+`course`    | float?  | Compass direction currently heading, in non-negative degrees (modulus 360) clockwise from North (thus, 0.0 is due North, 90.0 is due East, 180.0 is due South, and 270.0 is due West)
+`speed`     | float?  | Instantaneous speed, in meters / second
+
+Example:
+
+    heart,device=iPhone6S longitude=-97.7403,latitude=30.2747,accuracy=10.3,altitude=149,course=182.1,speed=3.32
 
 
 ## License
